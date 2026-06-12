@@ -1,0 +1,32 @@
+# --- Secrets (never commit) ---
+.env
+firmware/arduino_secrets.h
+**/arduino_secrets.h
+
+# --- Runtime data / persisted volumes ---
+data/
+influxdb/data/
+mosquitto/data/
+mosquitto/log/
+
+# --- Node-RED runtime artifacts ---
+node-red/data/
+node-red/.config.*
+node-red/.flows.json.backup
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# --- Local compose overrides (committed only as .example) ---
+docker-compose.override.yml
+
+# --- Arduino build output ---
+firmware/**/build/
+*.bin
+*.elf
+*.hex
