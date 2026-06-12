@@ -11,8 +11,8 @@ classroom laptops, e.g. `http://192.168.1.100:1880`).
 ## How it comes up "ready"
 
 - The image is built from [`Dockerfile`](./Dockerfile): base `nodered/node-red:3.1`
-  plus **`node-red-contrib-influxdb`** so the `influxdb out` node exists on first
-  boot — no manual palette install needed.
+  plus **`node-red-contrib-influxdb`** so the InfluxDB nodes exist on first boot —
+  no manual palette install needed.
 - [`flows.json`](./flows.json) is mounted into `/data/flows.json` and auto-loaded
   via the `FLOWS=flows.json` environment variable in `docker-compose.yml`.
 
@@ -25,9 +25,14 @@ classroom laptops, e.g. `http://192.168.1.100:1880`).
 [mqtt in: unmsm/iot2025/lab-a/g1/sensores/dht22]  (@ mosquitto:1883)
    -> [json]
    -> [function: build influx point]
-   -> [influxdb out (v1): database iot_lab]        (@ influxdb:8086)
+   -> [influxdb batch (v1): database iot_lab]      (@ influxdb:8086)
    -> [debug]
 ```
+
+> The write node is **`influxdb batch`** (not `influxdb out`). The function emits an
+> array of `{ measurement, tags, fields }` point objects, and `influxdb batch` is the
+> node that consumes that shape — each point carries its own measurement, so none is
+> set on the node itself.
 
 The function node builds an InfluxDB v1 point array verbatim:
 

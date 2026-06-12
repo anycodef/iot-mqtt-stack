@@ -95,7 +95,7 @@
   },
   {
     "id": "f1-influx-out",
-    "type": "influxdb out",
+    "type": "influxdb batch",
     "z": "tab-iot-lab",
     "influxdb": "influx-iot-lab",
     "name": "iot_lab",

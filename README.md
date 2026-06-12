@@ -264,7 +264,9 @@ automatically. Inside Docker, Node-RED reaches the broker at **`mosquitto:1883`*
 InfluxDB at **`influxdb:8086`** (service names, never `localhost`).
 
 - **Flow 1 — telemetry persistence:**
-  `mqtt in (sensores/dht22)` → `json` → `function` → `influxdb out (iot_lab)` → `debug`.
+  `mqtt in (sensores/dht22)` → `json` → `function` → `influxdb batch (iot_lab)` → `debug`.
+  The function emits an array of `{ measurement, tags, fields }` points, which the
+  `influxdb batch` node writes (each point carries its own measurement).
 - **Flow 2 — gas alarm automation:**
   `mqtt in (alarmas/gas)` → `switch (alerta?)` → `function (payload="ON")` →
   `mqtt out (actuadores/relay)` → notification.
