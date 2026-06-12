@@ -1,0 +1,19 @@
+# =============================================================================
+# Grafana datasource provisioning — InfluxDB 1.8 via InfluxQL.
+# Grafana reaches InfluxDB by SERVICE NAME on the shared Docker network.
+# =============================================================================
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB-iot_lab
+    uid: influxdb_iot_lab
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    database: iot_lab
+    isDefault: true
+    jsonData:
+      # InfluxDB 1.8 → InfluxQL query language (matches the lab guide's queries).
+      dbName: iot_lab
+      httpMode: GET
+    editable: true

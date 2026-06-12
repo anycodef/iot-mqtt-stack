@@ -1,0 +1,16 @@
+# =============================================================================
+# Grafana dashboard provider — loads every JSON dashboard in this folder.
+# =============================================================================
+apiVersion: 1
+
+providers:
+  - name: "UNMSM IoT dashboards"
+    orgId: 1
+    folder: "IoT Lab"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false
