@@ -1,0 +1,35 @@
+# =============================================================================
+# OPTIONAL machine-specific overrides.
+#
+# Docker Compose automatically merges docker-compose.override.yml on top of
+# docker-compose.yml. The canonical docker-compose.yml is committed and runs
+# UNCHANGED on both the Raspberry Pi 4 and the Arch dev machine; put anything
+# host-specific here so the base file stays portable.
+#
+# To use:  cp docker-compose.override.yml.example docker-compose.override.yml
+# (docker-compose.override.yml is git-ignored.)
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Example: on the Raspberry Pi, bind volumes to a USB SSD instead of the SD
+  # card. Easier here than editing .env if you want per-service control.
+  # ---------------------------------------------------------------------------
+  # influxdb:
+  #   volumes:
+  #     - /mnt/ssd/iot-data/influxdb:/var/lib/influxdb
+
+  # ---------------------------------------------------------------------------
+  # Example: bump Node-RED memory and expose it only on the LAN interface.
+  # ---------------------------------------------------------------------------
+  # nodered:
+  #   environment:
+  #     - NODE_OPTIONS=--max-old-space-size=512
+
+  # ---------------------------------------------------------------------------
+  # Example: pin services to specific host IPs / add extra published ports
+  # for a local-only dev workflow on Arch.
+  # ---------------------------------------------------------------------------
+  # grafana:
+  #   ports:
+  #     - "127.0.0.1:3000:3000"

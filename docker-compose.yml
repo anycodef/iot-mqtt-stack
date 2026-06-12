@@ -1,0 +1,138 @@
+# =============================================================================
+# IoT MQTT telemetry stack — UNMSM, Internet de las Cosas (MQTT lab)
+#
+# ONE compose file for BOTH targets:
+#   * Raspberry Pi 4   (arm64)  — the classroom backend host
+#   * Arch / x86_64    (amd64)  — the development machine
+# Every image below is published as a multi-arch manifest (amd64 + arm64),
+# so Docker automatically pulls the right variant on each host. No edits needed.
+#
+# Bring up:   docker compose up -d
+# Tear down:  docker compose down
+# Machine-specific tweaks go in docker-compose.override.yml (see the .example).
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Mosquitto — MQTT broker (the central Pub/Sub hub). Port 1883.
+  # ---------------------------------------------------------------------------
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: iot-mosquitto
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:1883:1883" # MQTT — reachable from classroom laptops by RPi IP
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ${DATA_PATH:-./data}/mosquitto/data:/mosquitto/data
+      - ${DATA_PATH:-./data}/mosquitto/log:/mosquitto/log
+    environment:
+      - TZ=${TZ:-America/Lima}
+    healthcheck:
+      # mosquitto_sub returns 0 once it can connect & subscribe to the broker.
+      test: ["CMD", "mosquitto_sub", "-h", "localhost", "-t", "$$SYS/#", "-C", "1", "-W", "3"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - iot-net
+
+  # ---------------------------------------------------------------------------
+  # Node-RED — flow-based ETL. Subscribes to MQTT, parses JSON, writes InfluxDB,
+  # holds the alarm/automation logic. Port 1880. Custom image bundles
+  # node-red-contrib-influxdb (see node-red/Dockerfile).
+  # ---------------------------------------------------------------------------
+  nodered:
+    build:
+      context: ./node-red
+    image: iot-nodered:3.1
+    container_name: iot-nodered
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:1880:1880" # Node-RED editor
+    volumes:
+      # Auto-load the committed flows on first start, then persist runtime state.
+      - ./node-red/flows.json:/data/flows.json
+      - ${DATA_PATH:-./data}/node-red:/data
+    environment:
+      - TZ=${TZ:-America/Lima}
+      - FLOWS=flows.json
+    depends_on:
+      mosquitto:
+        condition: service_started
+      influxdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:1880/',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - iot-net
+
+  # ---------------------------------------------------------------------------
+  # InfluxDB 1.8 — time-series database. Port 8086.
+  # 1.8 is chosen deliberately so the guide's InfluxQL queries, the `iot_lab`
+  # database model, node-red-contrib-influxdb (v1) and the Grafana InfluxQL
+  # datasource all work natively. INFLUXDB_DB auto-creates the database.
+  # ---------------------------------------------------------------------------
+  influxdb:
+    image: influxdb:1.8
+    container_name: iot-influxdb
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8086:8086" # InfluxDB HTTP API
+    volumes:
+      - ${DATA_PATH:-./data}/influxdb:/var/lib/influxdb
+    environment:
+      - TZ=${TZ:-America/Lima}
+      - INFLUXDB_DB=${INFLUXDB_DB:-iot_lab}
+      - INFLUXDB_HTTP_AUTH_ENABLED=false
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8086/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - iot-net
+
+  # ---------------------------------------------------------------------------
+  # Grafana — read-only dashboards + alerting over InfluxDB. Port 3000.
+  # Datasource and dashboards are provisioned from ./grafana/provisioning.
+  # ---------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.4.5
+    container_name: iot-grafana
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:3000:3000" # Grafana UI
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${DATA_PATH:-./data}/grafana:/var/lib/grafana
+    environment:
+      - TZ=${TZ:-America/Lima}
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - iot-net
+
+# -----------------------------------------------------------------------------
+# Single user-defined bridge network. Services reach each other BY SERVICE NAME
+# (mosquitto, nodered, influxdb, grafana) — never localhost.
+# -----------------------------------------------------------------------------
+networks:
+  iot-net:
+    driver: bridge
