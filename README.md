@@ -393,6 +393,26 @@ iot-mqtt-stack/
 └── docs/.gitkeep
 ```
 
+## Troubleshooting
+
+**Grafana or Node-RED restart in a loop / `localhost:3000` won't load.**
+The Docker daemon creates missing bind-mount targets under `${DATA_PATH}` as `root`,
+but Grafana runs as uid `472` and Node-RED as uid `1000` and cannot write there. The
+logs show `GF_PATHS_DATA ... is not writable` or `EACCES ... copyfile ... /data/settings.js`.
+Fix the ownership of the affected data directories (no host `sudo` needed — use a
+throwaway root container) and bring the stack back up:
+
+```bash
+docker compose down
+docker run --rm -v "$(pwd)/data:/data" alpine sh -c \
+  'chown -R 472:472 /data/grafana && chown -R 1000:1000 /data/node-red'
+docker compose up -d
+docker compose ps        # all four should report (healthy)
+```
+
+InfluxDB and Mosquitto run as root and are unaffected. If you relocate `DATA_PATH`
+(e.g. to a USB SSD), apply the same `chown` to the new location once.
+
 ## Roadmap
 
 - [ ] Migrate firmware to `256dpi/arduino-mqtt` for true QoS-1 publishing.
