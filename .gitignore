@@ -14,6 +14,13 @@ node-red/data/
 node-red/.config.*
 node-red/.flows.json.backup
 
+# --- Report snippet images (generated, not part of the deliverable) ---
+img/
+
+# --- Lab 08 ECC keys (never commit the private half) ---
+crypto/ecc_privada.pem
+firmware/publisher-ecc/ecc_public_key.h
+
 # --- OS / editor noise ---
 .DS_Store
 Thumbs.db
