@@ -114,6 +114,7 @@ Full topic list:
 | `unmsm/iot2025/lab-a/g1/sensores/gas` | value | MQ-2 (after warm-up) |
 | `unmsm/iot2025/lab-a/g1/sensores/dht22` | JSON | consumed by Node-RED → InfluxDB |
 | `unmsm/iot2025/lab-a/g1/sensores/ambiental` | JSON | BME280 temp/hum/pressure |
+| `unmsm/iot2025/lab-a/g1/sensores/json_enc` | Base64 | **Lab 08** — ECIES-encrypted JSON; only Node-RED can decrypt |
 | `unmsm/iot2025/lab-a/g1/alarmas/gas` | `ALERT` | gas threshold crossed |
 | `unmsm/iot2025/lab-a/g1/actuadores/relay` | `ON`/`OFF` | relay command |
 | `unmsm/iot2025/lab-a/g1/actuadores/relay/status` | `ON`/`OFF` | **retained** |
@@ -352,6 +353,82 @@ sketch from `arduino_secrets.example.h`); the only tracked secrets file has empt
 values. Remember the **PubSubClient QoS-0** caveat above. Full setup:
 [`firmware/README.md`](./firmware/README.md).
 
+## Lab 08 — ECC encryption + Google Sheets
+
+Lab 08 is **purely additive** on top of the Lab 07 pipeline above (Mosquitto, Node-RED,
+InfluxDB, Grafana and the three original sketches keep working unchanged). It adds two
+things: the ESP32 **encrypts** its JSON before publishing, and Node-RED **decrypts** it
+and appends each reading to a **Google Sheet**.
+
+### Why ECIES (and not "ECC encryption")
+
+ECC alone cannot encrypt arbitrary data — it only does key agreement (ECDH). So a new
+sketch ([`firmware/publisher-ecc`](./firmware/publisher-ecc)) uses **ECIES**: an
+*ephemeral* ECDH on curve **P-256 (secp256r1)** yields a shared secret, a SHA-256 KDF
+turns it into an AES key, and **AES-128-CTR** encrypts the payload.
+
+- **Node-RED** owns a *fixed* keypair: private `d`, public `Q = d·G`. `Q` is embedded in
+  the firmware (`ecc_public_key.h`); `d` stays on the Pi and never leaves it.
+- **The ESP32** generates a *fresh ephemeral* keypair `(r, R = r·G)` for **every
+  message** → Perfect Forward Secrecy.
+- The ESP32 computes `S = r·Q`, Node-RED computes `S = d·R`; both equal `r·d·G`, so the
+  same AES key is derived without ever transmitting `d` or `r`. `R` travels in the clear
+  (it is public — useless without `d`).
+
+```
+KDF:  aes_key = SHA256( S.x || R.x )[:16]
+Wire (before Base64):  [ eph_pub_x(32) | eph_pub_y(32) | nonce(16) | ciphertext(N) ]
+```
+
+The broker (`unmsm/iot2025/lab-a/g1/sensores/json_enc`) only ever sees opaque Base64
+bytes. The firmware uses the bundled **mbedtls** (SHA-256 + AES) plus **micro-ecc** for
+the ECDH — no extra crypto on the Node-RED side beyond Node's built-in `crypto` module.
+
+### Node-RED decryption → Google Sheets (Flow 3)
+
+A third flow on the same tab:
+
+```
+[mqtt in: sensores/json_enc (utf8)]
+   -> [function: Descifrado ECC]        (reads /data/ecc_privada.pem)
+   -> [function: Preparar payload Sheets]
+   -> [http request: POST APPS_SCRIPT_URL (follows 302)]
+   -> [debug]            (+ a catch node -> debug)
+```
+
+Two Docker-specific requirements make this work:
+
+1. **`node-red/settings.js`** (committed, mounted at `/data/settings.js`) exposes Node's
+   core `crypto` and `fs` to function nodes via `functionGlobalContext` — function nodes
+   cannot `require()` core modules directly. The decryption node reads them with
+   `global.get('crypto')` / `global.get('fs')`.
+2. The ECC **private key** must be placed inside the Node-RED data volume so it is
+   readable at **`/data/ecc_privada.pem`** in the container (see the runbook).
+
+The Apps Script endpoint URL is **never hardcoded**: it comes from `APPS_SCRIPT_URL` in
+`.env`, passed into the `nodered` service and read in the flow with `env.get(...)`.
+
+### Google Sheet schema
+
+The Apps Script in [`apps-script/Codigo.gs`](./apps-script/Codigo.gs) appends one row
+per reading (the timestamp is added server-side) to a tab named `Datos_IoT_UNMSM_G1`:
+
+| A | B | C | D | E | F | G | H |
+|---|---|---|---|---|---|---|---|
+| Timestamp (ISO) | Dispositivo | Temperatura (°C) | Humedad (%) | Presión_hPa | Gas_RAW | Alerta_Gas | RSSI_dBm |
+
+### Bringing Lab 08 up
+
+The runtime steps that can't be scripted (key generation, deploying the Apps Script,
+flashing) are listed in **[`docs/lab08-runbook.md`](./docs/lab08-runbook.md)**. In short:
+run `./scripts/ecc-keygen.sh`, copy `crypto/ecc_privada.pem` into the Node-RED data
+volume, deploy the Apps Script and set `APPS_SCRIPT_URL` in `.env`, flash
+`publisher-ecc`, then `docker compose up -d`.
+
+> 🔒 The ECC **private key** (`crypto/ecc_privada.pem`) and the generated
+> `firmware/publisher-ecc/ecc_public_key.h` are **git-ignored** — never commit them. The
+> public half is safe to share; the private half never leaves the Pi.
+
 ## Lab activities
 
 | Activity | What it covers | Where in the repo |
@@ -360,6 +437,7 @@ values. Remember the **PubSubClient QoS-0** caveat above. Full setup:
 | **2** | Multisensor (BME280 + MQ-2), JSON, gas alarm, non-blocking warm-up | `firmware/publisher-multisensor/` |
 | **3** | Subscribe + actuate: relay driven by broker commands (QoS 1 sub) | `firmware/subscriber-relay/` |
 | **4** | Persist & visualize: Node-RED → InfluxDB → Grafana dashboard | `node-red/`, `grafana/`, `docker-compose.yml` |
+| **5** | Encrypt telemetry end-to-end (ECIES) and persist to Google Sheets | `firmware/publisher-ecc/`, `apps-script/`, `scripts/ecc-keygen.sh` |
 
 ## Project structure
 
@@ -375,7 +453,8 @@ iot-mqtt-stack/
 │   └── config/mosquitto.conf     # LAN/anonymous profile
 ├── node-red/
 │   ├── Dockerfile                # base 3.1 + node-red-contrib-influxdb
-│   ├── flows.json                # auto-loaded: persistence + gas alarm flows
+│   ├── flows.json                # auto-loaded: persistence + gas alarm + ECC/Sheets flows
+│   ├── settings.js               # exposes crypto/fs to function nodes (Lab 08)
 │   └── README.md
 ├── grafana/
 │   └── provisioning/
@@ -388,9 +467,16 @@ iot-mqtt-stack/
 │   ├── publisher-dht22/publisher-dht22.ino
 │   ├── publisher-multisensor/publisher-multisensor.ino
 │   ├── subscriber-relay/subscriber-relay.ino
+│   ├── publisher-ecc/publisher-ecc.ino   # Lab 08 — ECIES encrypted publisher
 │   ├── arduino_secrets.example.h
 │   └── README.md
-└── docs/.gitkeep
+├── scripts/ecc-keygen.sh          # Lab 08 — P-256 keypair generator
+├── apps-script/                   # Lab 08 — Google Sheets web-app endpoint
+│   ├── Codigo.gs
+│   └── README.md
+└── docs/
+    ├── .gitkeep
+    └── lab08-runbook.md           # Lab 08 — manual bring-up steps
 ```
 
 ## Troubleshooting

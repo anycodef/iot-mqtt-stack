@@ -74,6 +74,47 @@ When the multisensor publishes a gas alarm, Node-RED reacts by commanding the
 relay (`actuadores/relay`) ON. This closes the bidirectional loop: telemetry
 flows **up** the pipeline, commands flow **down** to the actuator ESP32.
 
+## Flow 3 — ECC decryption + Google Sheets (Lab 08)
+
+```
+[mqtt in: unmsm/iot2025/lab-a/g1/sensores/json_enc]  (datatype: utf8)
+   -> [function: Descifrado ECC]            (reads /data/ecc_privada.pem)
+   -> [function: Preparar payload Sheets]
+   -> [http request: POST env APPS_SCRIPT_URL]   (follows the 302 redirect)
+   -> [debug]                                (+ a catch node -> debug)
+```
+
+The ESP32 `publisher-ecc` sketch publishes an **ECIES-encrypted** payload (ephemeral
+ECDH P-256 + SHA-256 KDF + AES-128-CTR, Base64-encoded). Node-RED is the only party that
+can decrypt it, because it holds the ECC private key.
+
+Two Docker-specific pieces make this flow work:
+
+- **`settings.js`** (committed, mounted at `/data/settings.js`) exposes Node's core
+  `crypto` and `fs` modules to function nodes via `functionGlobalContext`. Function nodes
+  cannot `require()` core modules directly, so the decryption node reads them with
+  `global.get('crypto')` / `global.get('fs')`. The compose file mounts it and keeps
+  `FLOWS=flows.json` (consistent with `flowFile` inside `settings.js`).
+- **The ECC private key** must live in the mounted Node-RED data volume so it is readable
+  inside the container at **`/data/ecc_privada.pem`**. On the Pi:
+
+  ```bash
+  cp crypto/ecc_privada.pem "${DATA_PATH:-./data}/node-red/ecc_privada.pem"
+  ```
+
+> The `mqtt in` node uses **`datatype: "utf8"`** — the payload is a Base64 *string*;
+> auto-detect/buffer would corrupt it before decryption. The `http request` node takes
+> the method/URL from `msg` and **follows redirects** (Apps Script answers with a 302).
+> The endpoint URL is read from the `APPS_SCRIPT_URL` env var (`env.get(...)`), never
+> hardcoded in the committed flow.
+
+The decryption KDF mirrors the firmware byte-for-byte: `SHA256(S.x || eph_pub_x)[:16]`,
+where `S.x` is the ECDH shared-secret X coordinate. Malformed or forged messages throw
+and are dropped (`return null`), and the `catch` node logs any error.
+
+See [`../apps-script/README.md`](../apps-script/README.md) for the Google Sheet endpoint
+and [`../docs/lab08-runbook.md`](../docs/lab08-runbook.md) for the full bring-up order.
+
 ## Editing the flows
 
 Edit in the browser editor and **Deploy**, or edit `flows.json` directly and

@@ -7,6 +7,7 @@ Three Arduino sketches that exercise the full pipeline, one per lab activity:
 | [`publisher-dht22/`](./publisher-dht22) | 1 | `esp32-g1-dht22` | Publishes DHT22 temperature/humidity + JSON, LWT status |
 | [`publisher-multisensor/`](./publisher-multisensor) | 2 | `esp32-g1-bme280` | Publishes BME280 environmental JSON + MQ-2 gas/alarm (non-blocking warm-up) |
 | [`subscriber-relay/`](./subscriber-relay) | 3 | `esp32-g1-relay` | Subscribes to relay commands, drives an active-LOW relay |
+| [`publisher-ecc/`](./publisher-ecc) | 5 | `esp32-g1-ecc` | **Lab 08** — DHT22 + BME280 + MQ-2 JSON, ECIES-encrypted (ephemeral ECDH P-256 + AES-128-CTR) before publishing |
 
 ## Required libraries (Arduino Library Manager)
 
@@ -15,9 +16,26 @@ Three Arduino sketches that exercise the full pipeline, one per lab activity:
 - **DHT sensor library** (Adafruit) + **Adafruit Unified Sensor**
 - **Adafruit BME280 Library**
 - **ArduinoJson** (by Benoit Blanchon)
+- **micro-ecc** (by Ken MacKay — search "micro-ecc") — *only* for `publisher-ecc`
+  (Lab 08). SHA-256 and AES come from **mbedtls**, which ships with the ESP32 core.
 
 Board: any **ESP32-S3** dev board (install the *esp32 by Espressif Systems* board
 package). The pinouts below are wired for the classroom kit.
+
+## Lab 08 (`publisher-ecc`): generate the ECC keys FIRST
+
+Before compiling `publisher-ecc`, run the keygen script from the repo root **once**:
+
+```bash
+./scripts/ecc-keygen.sh
+```
+
+It produces `firmware/publisher-ecc/ecc_public_key.h` (the subscriber's public key `Q`,
+`#include`d by the sketch) plus the matching `crypto/ecc_privada.pem` that Node-RED uses
+to decrypt. Both the generated header and the private key are **git-ignored** — the
+header is keypair-specific, so treat it like `arduino_secrets.h`. If you regenerate the
+keys, re-flash the ESP32 and restart Node-RED. See the project README's *Lab 08* section
+and [`../docs/lab08-runbook.md`](../docs/lab08-runbook.md).
 
 ## Credentials — `arduino_secrets.h` (git-ignored)
 
@@ -34,6 +52,7 @@ Arduino compiles only files inside the sketch folder, so copy the template into
 cp arduino_secrets.example.h publisher-dht22/arduino_secrets.h
 cp arduino_secrets.example.h publisher-multisensor/arduino_secrets.h
 cp arduino_secrets.example.h subscriber-relay/arduino_secrets.h
+cp arduino_secrets.example.h publisher-ecc/arduino_secrets.h          # Lab 08
 ```
 
 Then edit each copy:
