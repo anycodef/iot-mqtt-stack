@@ -214,5 +214,142 @@
     "x": 790,
     "y": 320,
     "wires": []
+  },
+
+  {
+    "id": "f3-mqtt-in-enc",
+    "type": "mqtt in",
+    "z": "tab-iot-lab",
+    "name": "sensores/json_enc",
+    "topic": "unmsm/iot2025/lab-a/g1/sensores/json_enc",
+    "qos": "0",
+    "datatype": "utf8",
+    "broker": "broker-mosquitto",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 460,
+    "wires": [
+      [
+        "f3-decrypt"
+      ]
+    ]
+  },
+  {
+    "id": "f3-decrypt",
+    "type": "function",
+    "z": "tab-iot-lab",
+    "name": "Descifrado ECC",
+    "func": "// Requires settings.js -> functionGlobalContext: { crypto, fs }.\n// Reads the ECC private key from /data/ecc_privada.pem (mounted volume).\nconst crypto = global.get('crypto');\nconst fs     = global.get('fs');\n\nlet privKey = flow.get('eccPrivKey');\nif (!privKey) {\n    const pem = fs.readFileSync('/data/ecc_privada.pem', 'utf8');\n    privKey = crypto.createPrivateKey({ key: pem, format: 'pem' });\n    flow.set('eccPrivKey', privKey);\n}\n\ntry {\n    const raw   = Buffer.from(msg.payload, 'base64');   // [X|Y|nonce|ct]\n    const ephX  = raw.subarray(0, 32);\n    const ephY  = raw.subarray(32, 64);\n    const nonce = raw.subarray(64, 80);\n    const ct    = raw.subarray(80);\n\n    // Rebuild the ephemeral public key R as a KeyObject (SPKI DER).\n    const spki = Buffer.from('3059301306072a8648ce3d020106082a8648ce3d030107034200', 'hex');\n    const ephPub = crypto.createPublicKey({\n        key: Buffer.concat([spki, Buffer.from([0x04]), ephX, ephY]),\n        format: 'der', type: 'spki'\n    });\n\n    // ECDH: S.x = (d * R).x  — diffieHellman avoids manual scalar extraction.\n    const S = crypto.diffieHellman({ privateKey: privKey, publicKey: ephPub });\n\n    // KDF mirrors the firmware exactly: SHA256(S.x || eph_pub_x)[:16].\n    const aesKey = crypto.createHash('sha256')\n                         .update(Buffer.concat([S, ephX])).digest().subarray(0, 16);\n\n    const decipher = crypto.createDecipheriv('aes-128-ctr', aesKey, nonce);\n    const plain = Buffer.concat([decipher.update(ct), decipher.final()]);\n\n    msg.payload = JSON.parse(plain.toString('utf8'));\n    return msg;\n} catch (e) {\n    node.error('ECC decrypt failed: ' + e.message, msg);\n    return null;   // drop malformed / forged messages\n}",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 460,
+    "wires": [
+      [
+        "f3-prepare"
+      ]
+    ]
+  },
+  {
+    "id": "f3-prepare",
+    "type": "function",
+    "z": "tab-iot-lab",
+    "name": "Preparar payload Sheets",
+    "func": "const d = msg.payload;\nmsg.payload = {\n    dispositivo: d.dispositivo || 'esp32-desconocido',\n    temperatura: parseFloat(d.temperatura),\n    humedad:     parseFloat(d.humedad),\n    presion_hpa: parseFloat(d.presion_hpa),\n    gas_raw:     parseInt(d.gas_raw),\n    alerta_gas:  Boolean(d.alerta_gas),\n    rssi:        parseInt(d.rssi)\n};\nmsg.url     = env.get('APPS_SCRIPT_URL');   // set in .env -> docker-compose\nmsg.method  = 'POST';\nmsg.headers = { 'Content-Type': 'application/json' };\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 600,
+    "y": 460,
+    "wires": [
+      [
+        "f3-http"
+      ]
+    ]
+  },
+  {
+    "id": "f3-http",
+    "type": "http request",
+    "z": "tab-iot-lab",
+    "name": "POST Apps Script",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 840,
+    "y": 460,
+    "wires": [
+      [
+        "f3-debug"
+      ]
+    ]
+  },
+  {
+    "id": "f3-debug",
+    "type": "debug",
+    "z": "tab-iot-lab",
+    "name": "Sheets response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1060,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "f3-catch",
+    "type": "catch",
+    "z": "tab-iot-lab",
+    "name": "errores Flow 3",
+    "scope": [
+      "f3-decrypt",
+      "f3-prepare",
+      "f3-http"
+    ],
+    "uncaught": false,
+    "x": 380,
+    "y": 540,
+    "wires": [
+      [
+        "f3-catch-debug"
+      ]
+    ]
+  },
+  {
+    "id": "f3-catch-debug",
+    "type": "debug",
+    "z": "tab-iot-lab",
+    "name": "error",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "error",
+    "targetType": "msg",
+    "statusVal": "error",
+    "statusType": "auto",
+    "x": 600,
+    "y": 540,
+    "wires": []
   }
 ]

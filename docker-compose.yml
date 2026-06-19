@@ -59,6 +59,8 @@ services:
     environment:
       - TZ=${TZ:-America/Lima}
       - FLOWS=flows.json
+      # Lab 08 — Google Apps Script endpoint for the decrypted-readings flow.
+      - APPS_SCRIPT_URL=${APPS_SCRIPT_URL:-}
     depends_on:
       mosquitto:
         condition: service_started
