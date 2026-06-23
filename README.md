@@ -425,6 +425,13 @@ run `./scripts/ecc-keygen.sh`, copy `crypto/ecc_privada.pem` into the Node-RED d
 volume, deploy the Apps Script and set `APPS_SCRIPT_URL` in `.env`, flash
 `publisher-ecc`, then `docker compose up -d`.
 
+Step-by-step walkthroughs in Spanish:
+
+- **[`docs/guia-stack.md`](./docs/guia-stack.md)** — levantar los contenedores y los
+  nodos de Node-RED, y **generar las claves ECC** (lado servidor).
+- **[`docs/guia-esp32.md`](./docs/guia-esp32.md)** — levantar el ESP32 desde cero hasta
+  conectarlo al broker (firmware, cableado, credenciales y clave pública).
+
 > 🔒 The ECC **private key** (`crypto/ecc_privada.pem`) and the generated
 > `firmware/publisher-ecc/ecc_public_key.h` are **git-ignored** — never commit them. The
 > public half is safe to share; the private half never leaves the Pi.
