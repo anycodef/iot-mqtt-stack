@@ -1,20 +1,14 @@
-flowchart LR
-  subgraph ESP["ESP32-S3 — nodo sensor"]
-    direction TB
-    S["DHT22 + BME280 + MQ-2"] --> J["JSON (~200 B)"]
-    J --> E["ECIES<br/>ECDH efimero P-256<br/>+ KDF SHA-256<br/>+ AES-128-CTR"]
-    E --> X["Base64 (~700 B)"]
-  end
-  X -->|"sensores/json_enc<br/>QoS 0 — SOLO CIPHERTEXT"| M
-  subgraph STACK["Raspberry Pi — Docker"]
-    direction TB
-    M["Mosquitto :1883<br/>broker (ve solo bytes opacos)"]
-    N["Node-RED :1880<br/>descifra con clave privada ECC"]
-    I[("InfluxDB :8086")]
-    G["Grafana :3000"]
-    M --> N
-    N --> I --> G
-  end
-  N -->|"HTTPS POST (doPost)"| GS["Google Sheets<br/>(Apps Script)"]
+flowchart TB
+  A["ESP32-S3 — nodo sensor<br/>DHT22 + BME280 + MQ-2 --> JSON (~200 B)"]
+  B["ECIES<br/>ECDH efimero P-256 + KDF SHA-256 + AES-128-CTR --> Base64"]
+  C["Mosquitto :1883 — broker<br/>(solo ve bytes opacos)"]
+  D["Node-RED :1880<br/>descifra con la clave privada ECC"]
+  E["Google Sheets (Apps Script)"]
+  F["InfluxDB :8086 --> Grafana :3000"]
+  A --> B
+  B -->|"sensores/json_enc — QoS 0 — SOLO CIPHERTEXT"| C
+  C --> D
+  D -->|"HTTPS POST (doPost)"| E
+  D --> F
   classDef sec fill:#dff0d8,stroke:#3c763d,color:#1b1b1b;
-  class E,X sec;
+  class B sec;

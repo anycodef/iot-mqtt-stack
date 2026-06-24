@@ -5,20 +5,17 @@
 ## Facultad de Ingeniería de Sistemas e Informática
 ### Curso: Internet de las Cosas
 
----
-
 # Guía de Laboratorio Nº 08 — Protocolos de Comunicación IoT con Cifrado ECC y Persistencia en Google Sheets
 
 | | |
 |---|---|
-| **Integrantes** | _[completar — apellidos y nombres, código]_ |
-| | _[completar]_ |
-| | _[completar]_ |
+| **Integrantes** | Pumapillo Sarmiento, Bruno |
+| | Sota Rios, Pedro Josue |
+| | Quineche Casana, Luiz Ignacio |
+| | Davalos Benito, Rodrigo |
 | **Docente** | Msc. Jorge L. Guerra Guerra |
 | **Ciclo** | 2026-I (8.º ciclo) |
 | **Fecha** | _[completar]_ |
-
----
 
 ## 1. Introducción
 
@@ -40,8 +37,6 @@ cifrado se realiza en el dispositivo y el descifrado en el receptor autorizado. 
 propiedad central que se analiza a lo largo del informe. La práctica demuestra que es viable
 ejecutar criptografía asimétrica moderna en un microcontrolador de bajo costo y combinarla con
 servicios gratuitos de la nube para obtener un sistema IoT seguro, observable y reproducible.
-
----
 
 ## 2. Marco Teórico
 
@@ -117,8 +112,6 @@ agregando una marca de tiempo ISO 8601. Apps Script responde con un JSON
 convierte una hoja de cálculo en un **almacén de series temporales** accesible y gratuito,
 adecuado para prototipos y laboratorios.
 
----
-
 ## 3. Actividades 1–3 — Verificación base MQTT
 
 Antes de introducir el cifrado se valida el pipeline MQTT en claro, reutilizando los sketches
@@ -154,8 +147,6 @@ intervención del dispositivo.*
 ![Figura 6b — El nodo vuelve a «online» al reconectarse](docs/img/06-relay-lwt-online.png)
 *Figura 6b. Cuando el ESP32 se reconecta al broker, publica `online` (retenido) en el mismo
 tópico, restableciendo la señalización de presencia del nodo.*
-
----
 
 ## 4. Actividad 4 — Cifrado ECC (ECIES)
 
@@ -319,8 +310,6 @@ bytes opacos. Sin la clave privada ECC el contenido no es descifrable.*
 clave privada, con los campos `dispositivo`, `temperatura`, `humedad`, `presion_hpa`, `gas_raw`,
 `alerta_gas` y `rssi`.*
 
----
-
 ## 5. Actividad 5 — Persistencia en Google Sheets
 
 El nodo de descifrado entrega el JSON a un nodo de preparación y, de ahí, a un nodo
@@ -385,8 +374,6 @@ Cada fila persistida en la pestaña `Datos_IoT_UNMSM_G1` tiene **8 columnas**:
 *Figura 10. Respuesta `{"status":"ok","fila":N, ...}` del web app de Apps Script ante el POST de
 Node-RED, confirmando que cada lectura descifrada se persiste como una **nueva fila** en la hoja
 `Datos_IoT_UNMSM_G1`.*
-
----
 
 ## 6. Cuestionario
 
@@ -540,8 +527,6 @@ Se propone la arquitectura de la Figura 11, con los siguientes componentes:
 *Figura 11. Diseño seguro multi-aula: cifrado ECC diferenciado por sala, broker autenticado con
 ACL, descifrado y validación en Node-RED, persistencia por pestaña y alertas por correo.*
 
----
-
 ## 7. Conclusiones
 
 1. **Confidencialidad de extremo a extremo viable en hardware embebido.** Se demostró que un
@@ -571,8 +556,6 @@ ACL, descifrado y validación en Node-RED, persistencia por pestaña y alertas p
 6. **La separación de claves sustenta la postura de seguridad.** Mantener la clave privada
    **solo** en el receptor (la Raspberry Pi) y publicar únicamente la pública en el dispositivo
    reduce la superficie de ataque: interceptar la red no basta para descifrar.
-
----
 
 ## 8. Referencias
 
