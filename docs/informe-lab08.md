@@ -146,10 +146,14 @@ actuadores y `status`/LWT).*
 > `unmsm/iot2025/lab-a/g1/...` y el contenido **legible** (JSON en claro) de
 > `sensores/dht22` y/o del multisensor, además del tópico `status` con el valor `online`.
 
-![Figura 6 — Lazo de actuación del relé](docs/img/06-relay-lwt.png)
-> Captura requerida: evidencia del relé conmutando ante una alarma de gas (mensaje en
-> `actuadores/relay`) y/o el cambio del tópico `status` a `offline` por acción del LWT al
-> desconectar el nodo.
+![Figura 6a — LWT: el broker publica «offline» al caer el nodo](docs/img/06-relay-lwt.png)
+*Figura 6a. Al desconectarse el ESP32, el broker detecta la pérdida de conexión y publica
+automáticamente el mensaje **Last Will and Testament** `offline` en el tópico `status`, sin
+intervención del dispositivo.*
+
+![Figura 6b — El nodo vuelve a «online» al reconectarse](docs/img/06-relay-lwt-online.png)
+*Figura 6b. Cuando el ESP32 se reconecta al broker, publica `online` (retenido) en el mismo
+tópico, restableciendo la señalización de presencia del nodo.*
 
 ---
 
