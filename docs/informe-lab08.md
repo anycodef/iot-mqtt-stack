@@ -377,10 +377,10 @@ Cada fila persistida en la pestaña `Datos_IoT_UNMSM_G1` tiene **8 columnas**:
 > de lecturas reales, mostrando las 8 columnas pobladas y marcas de tiempo consecutivas
 > separadas ~10 s.
 
-![Figura 10 — Respuesta JSON del Apps Script](docs/img/10-apps-script-respuesta.png)
-> Captura requerida: la respuesta del web app `{"status":"ok","fila":N,"timestamp":"..."}`
-> confirmando la inserción de una fila (visible, por ejemplo, en el panel Debug de Node-RED o
-> en las herramientas de red).
+![Figura 10 — Respuesta del Apps Script confirmando la inserción](docs/img/evidencia-apps-script-respuesta.png)
+*Figura 10. Respuesta `{"status":"ok","fila":N, ...}` del web app de Apps Script ante el POST de
+Node-RED, confirmando que cada lectura descifrada se persiste como una **nueva fila** en la hoja
+`Datos_IoT_UNMSM_G1`.*
 
 ---
 
