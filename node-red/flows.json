@@ -252,7 +252,8 @@
     "y": 460,
     "wires": [
       [
-        "f3-prepare"
+        "f3-prepare",
+        "f3-influx-pub"
       ]
     ]
   },
@@ -281,7 +282,7 @@
     "z": "tab-iot-lab",
     "name": "POST Apps Script",
     "method": "use",
-    "ret": "obj",
+    "ret": "txt",
     "paytoqs": "ignore",
     "url": "",
     "tls": "",
@@ -349,6 +350,24 @@
     "statusVal": "error",
     "statusType": "auto",
     "x": 600,
+    "y": 540,
+    "wires": []
+  },
+  {
+    "id": "f3-influx-pub",
+    "type": "mqtt out",
+    "z": "tab-iot-lab",
+    "name": "Republicar a dht22 (InfluxDB/Grafana)",
+    "topic": "unmsm/iot2025/lab-a/g1/sensores/dht22",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker-mosquitto",
+    "x": 660,
     "y": 540,
     "wires": []
   }
