@@ -175,16 +175,15 @@ void connectMQTT() {
 }
 
 void publishEncrypted() {
-  float temperatura = dht.readTemperature();
-  float humedad     = dht.readHumidity();
+  // MODO SIMULACIÓN (rama test/firmware-datos-simulados, SIN hardware):
+  // genera lecturas de temperatura/humedad en lugar de leer el DHT22, para validar
+  // el pipeline ECIES -> Node-RED -> Google Sheets sin sensores conectados.
+  // La versión real (lectura del DHT22) está en la rama master.
+  float temperatura = 23.0 + (float)(esp_random() % 400)  / 100.0;  // 23.00–26.99 °C
+  float humedad     = 50.0 + (float)(esp_random() % 1500) / 100.0;  // 50.00–64.99 %
   float presion     = bmeOk ? bme.readPressure() / 100.0F : 0.0F;
   int   gas         = analogRead(MQ2_AO_PIN);
   bool  alerta      = (gas >= GAS_THRESHOLD) || (digitalRead(MQ2_DO_PIN) == LOW);
-
-  if (isnan(temperatura) || isnan(humedad)) {
-    Serial.println("[DHT22] Read failed — skipping cycle.");
-    return;
-  }
 
   StaticJsonDocument<256> doc;
   doc["dispositivo"] = DEVICE_ID;
