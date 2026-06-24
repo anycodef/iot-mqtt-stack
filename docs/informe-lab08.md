@@ -305,15 +305,15 @@ La derivación `SHA256(S.x ‖ R.x)` reproduce **byte a byte** la del firmware, 
 extremos obtienen la misma clave AES. Los mensajes mal formados o falsificados lanzan una
 excepción y se descartan (`return null`).
 
-![Figura 7 — Ciphertext Base64 en el broker (MQTT Explorer)](docs/img/07-mqtt-explorer-cifrado.png)
-> Captura requerida: MQTT Explorer mostrando el tópico `unmsm/iot2025/lab-a/g1/sensores/json_enc`
-> con su carga **ilegible en Base64** (cadena de caracteres aleatorios), evidenciando que el
-> broker solo observa bytes opacos.
+![Figura 7 — Ciphertext Base64 en el broker](docs/img/evidencia-ciphertext-broker.png)
+*Figura 7. Suscripción al tópico `unmsm/iot2025/lab-a/g1/sensores/json_enc`: el broker entrega
+únicamente una cadena **Base64 ilegible** (el ciphertext ECIES), evidenciando que solo observa
+bytes opacos. Sin la clave privada ECC el contenido no es descifrable.*
 
-![Figura 8 — JSON descifrado en el panel Debug de Node-RED](docs/img/08-nodered-debug-descifrado.png)
-> Captura requerida: el panel *Debug* de Node-RED mostrando el objeto JSON ya descifrado, con
-> los campos `dispositivo`, `temperatura`, `humedad`, `presion_hpa`, `gas_raw`, `alerta_gas` y
-> `rssi`.
+![Figura 8 — JSON descifrado por Node-RED](docs/img/evidencia-json-descifrado.png)
+*Figura 8. Resultado del nodo «Descifrado ECC»: las mismas lecturas, ya en claro tras aplicar la
+clave privada, con los campos `dispositivo`, `temperatura`, `humedad`, `presion_hpa`, `gas_raw`,
+`alerta_gas` y `rssi`.*
 
 ---
 
