@@ -16,6 +16,9 @@ node-red/.flows.json.backup
 
 # --- Report snippet images (generated, not part of the deliverable) ---
 img/
+# ...except the Lab 08 report diagrams, which ARE a deliverable:
+!docs/img/
+!docs/img/**
 
 # --- Lab 08 ECC keys (never commit the private half) ---
 crypto/ecc_privada.pem

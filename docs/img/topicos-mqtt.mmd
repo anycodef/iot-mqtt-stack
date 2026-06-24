@@ -1,0 +1,11 @@
+flowchart TD
+  R["unmsm/iot2025/lab-a/g1"]
+  R --> ENC["sensores/json_enc<br/>QoS 0 — CIFRADO (Base64)"]
+  R --> DH["sensores/dht22<br/>QoS 0 — en claro (Lab 07)"]
+  R --> GAS["alarmas/gas<br/>QoS 0 — en claro"]
+  R --> RLY["actuadores/relay<br/>QoS 0 — en claro"]
+  R --> ST["status (LWT retained)<br/>QoS 0 — en claro"]
+  classDef enc fill:#dff0d8,stroke:#3c763d;
+  classDef clr fill:#f2dede,stroke:#a94442;
+  class ENC enc;
+  class DH,GAS,RLY,ST clr;

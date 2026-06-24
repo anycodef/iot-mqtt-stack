@@ -1,0 +1,20 @@
+flowchart TB
+  subgraph AULAS["5 aulas FISI-UNMSM"]
+    direction LR
+    A1["ESP32 Aula 1<br/>clave Q1"]
+    A2["ESP32 Aula 2<br/>clave Q2"]
+    A3["ESP32 Aula 3<br/>clave Q3"]
+    A4["ESP32 Aula 4<br/>clave Q4"]
+    A5["ESP32 Aula 5<br/>clave Q5"]
+  end
+  A1 -->|".../aula-1/sensores/json_enc"| MB
+  A2 -->|".../aula-2/..."| MB
+  A3 -->|".../aula-3/..."| MB
+  A4 -->|".../aula-4/..."| MB
+  A5 -->|".../aula-5/..."| MB
+  MB["Mosquitto con autenticacion<br/>usuario/contrasena + ACL por aula"]
+  MB --> NR["Node-RED<br/>descifrado por aula + validacion<br/>+ umbrales de alerta"]
+  NR --> GS["Google Sheets<br/>1 pestana por aula"]
+  NR -->|"umbral excedido"| MAIL["Apps Script (MailApp)<br/>notificacion por correo"]
+  classDef sec fill:#dff0d8,stroke:#3c763d;
+  class MB,NR sec;

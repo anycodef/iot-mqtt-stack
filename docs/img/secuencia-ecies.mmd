@@ -1,0 +1,13 @@
+sequenceDiagram
+  autonumber
+  participant E as ESP32-S3 (emisor)
+  participant B as Mosquitto (broker)
+  participant N as Node-RED (receptor)
+  Note over E: 1. Par efimero (r, R = r*G)
+  Note over E: 2. ECDH: S = r*Q  (Q = clave publica del receptor)
+  Note over E: 3. KDF: k = SHA-256(S.x || R.x) [:16]
+  Note over E: 4. AES-128-CTR: c = Enc_k(JSON), nonce aleatorio
+  E->>B: 5. publish  R.x || R.y || nonce || c   (Base64)
+  B->>N: 6. entrega ciphertext (el broker NO descifra)
+  Note over N: 7. ECDH: S = d*R  (d = clave privada del receptor)
+  Note over N: 8. KDF identico + AES-128-CTR  =>  JSON en claro
